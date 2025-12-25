@@ -83,9 +83,9 @@ docker exec moex_airflow_webserver airflow dags list | grep moex
 
 ## Результат
 
-✅ DAG успешно найден
-✅ ETL процесс запущен
-✅ Задачи в статусе "queued"
+ DAG успешно найден
+ ETL процесс запущен
+ Задачи в статусе "queued"
 
 ## Текущий статус
 
