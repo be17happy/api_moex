@@ -1,0 +1,150 @@
+services:
+  # PostgreSQL - Raw Data Storage
+  postgres_raw:
+    image: postgres:15
+    container_name: moex_postgres_raw
+    environment:
+      POSTGRES_USER: moex_user
+      POSTGRES_PASSWORD: moex_password
+      POSTGRES_DB: moex_raw
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_raw_data:/var/lib/postgresql/data
+      - ./sql/init_raw.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - moex_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U moex_user -d moex_raw"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # PostgreSQL - Data Warehouse
+  postgres_dwh:
+    image: postgres:15
+    container_name: moex_postgres_dwh
+    environment:
+      POSTGRES_USER: moex_user
+      POSTGRES_PASSWORD: moex_password
+      POSTGRES_DB: moex_dwh
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_dwh_data:/var/lib/postgresql/data
+      - ./sql/init_dwh.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - moex_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U moex_user -d moex_dwh"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Apache Airflow - Scheduler
+  airflow-webserver:
+    build:
+      context: .
+      dockerfile: Dockerfile.airflow
+    image: moex_airflow:latest
+    container_name: moex_airflow_webserver
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://moex_user:moex_password@postgres_raw:5432/airflow
+      AIRFLOW__CORE__FERNET_KEY: 'UKMzEm3yIuFYEq1y3-2FxJFKnH5VY7T8vQz9vZJKp1A='
+      AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
+      AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+      AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.basic_auth'
+      _AIRFLOW_DB_MIGRATE: 'true'
+      _AIRFLOW_WWW_USER_CREATE: 'true'
+      _AIRFLOW_WWW_USER_USERNAME: admin
+      _AIRFLOW_WWW_USER_PASSWORD: admin
+    volumes:
+      - ./flows:/opt/airflow/dags
+      - ./logs:/opt/airflow/logs
+      - ./config:/opt/airflow/config
+      - airflow_logs:/opt/airflow/logs
+    ports:
+      - "8080:8080"
+    networks:
+      - moex_network
+    depends_on:
+      postgres_raw:
+        condition: service_healthy
+    command: webserver
+
+  airflow-scheduler:
+    build:
+      context: .
+      dockerfile: Dockerfile.airflow
+    image: moex_airflow:latest
+    container_name: moex_airflow_scheduler
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://moex_user:moex_password@postgres_raw:5432/airflow
+      AIRFLOW__CORE__FERNET_KEY: 'UKMzEm3yIuFYEq1y3-2FxJFKnH5VY7T8vQz9vZJKp1A='
+      AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
+      AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+    volumes:
+      - ./flows:/opt/airflow/dags
+      - ./logs:/opt/airflow/logs
+      - ./config:/opt/airflow/config
+      - airflow_logs:/opt/airflow/logs
+    networks:
+      - moex_network
+    depends_on:
+      postgres_raw:
+        condition: service_healthy
+    command: scheduler
+
+  # Dask Scheduler
+  dask-scheduler:
+    image: daskdev/dask:latest
+    container_name: moex_dask_scheduler
+    ports:
+      - "8786:8786"
+      - "8787:8787"
+    networks:
+      - moex_network
+    command: dask-scheduler
+
+  # Dask Worker
+  dask-worker:
+    image: daskdev/dask:latest
+    container_name: moex_dask_worker
+    depends_on:
+      - dask-scheduler
+    networks:
+      - moex_network
+    environment:
+      DASK_SCHEDULER_ADDRESS: dask-scheduler:8786
+    command: dask-worker dask-scheduler:8786
+
+  # Grafana - Visualization
+  grafana:
+    image: grafana/grafana:10.2.0
+    container_name: moex_grafana
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_INSTALL_PLUGINS: ''
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./dashboards:/etc/grafana/provisioning/dashboards
+      - ./dashboards/datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml
+    networks:
+      - moex_network
+    depends_on:
+      - postgres_dwh
+
+volumes:
+  postgres_raw_data:
+  postgres_dwh_data:
+  grafana_data:
+  airflow_logs:
+
+networks:
+  moex_network:
+    driver: bridge

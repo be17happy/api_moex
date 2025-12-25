@@ -1,0 +1,22 @@
+# Только необходимые зависимости для AirFlow DAG
+
+# Database drivers
+psycopg2-binary==2.9.9
+SQLAlchemy==1.4.51
+
+# Moscow Exchange API
+apimoex==1.3.0
+
+# Data processing
+pandas==2.1.4
+numpy==1.26.2
+dask[complete]==2024.1.0
+
+# API requests
+requests==2.31.0
+
+# Logging
+loguru==0.7.2
+
+# Date/Time utilities
+python-dateutil==2.8.2

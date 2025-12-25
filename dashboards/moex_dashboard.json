@@ -1,0 +1,236 @@
+{
+  "dashboard": {
+    "title": "MOEX Trading Analytics",
+    "tags": ["moex", "trading", "analytics"],
+    "timezone": "browser",
+    "schemaVersion": 16,
+    "version": 0,
+    "refresh": "5m",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Market Summary - Daily Volume",
+        "type": "graph",
+        "gridPos": {
+          "x": 0,
+          "y": 0,
+          "w": 12,
+          "h": 8
+        },
+        "targets": [
+          {
+            "datasource": "MOEX Analytics DWH",
+            "format": "time_series",
+            "rawSql": "SELECT summary_date as time, total_volume as value FROM analytics.market_summary ORDER BY summary_date",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {
+            "format": "short",
+            "label": "Volume"
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "title": "Market Summary - Total Value",
+        "type": "graph",
+        "gridPos": {
+          "x": 12,
+          "y": 0,
+          "w": 12,
+          "h": 8
+        },
+        "targets": [
+          {
+            "datasource": "MOEX Analytics DWH",
+            "format": "time_series",
+            "rawSql": "SELECT summary_date as time, total_value as value FROM analytics.market_summary ORDER BY summary_date",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {
+            "format": "currencyRUB",
+            "label": "Value (RUB)"
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "title": "Top Gainers Today",
+        "type": "table",
+        "gridPos": {
+          "x": 0,
+          "y": 8,
+          "w": 12,
+          "h": 8
+        },
+        "targets": [
+          {
+            "datasource": "MOEX Analytics DWH",
+            "format": "table",
+            "rawSql": "SELECT ds.secid, ds.shortname, tp.price_change_pct, tp.volume, tp.value FROM analytics.top_performers tp JOIN analytics.dim_security ds ON tp.security_key = ds.security_key WHERE tp.analysis_date = CURRENT_DATE AND tp.period = 'daily' AND tp.price_change_pct > 0 ORDER BY tp.rank LIMIT 10",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "Top Losers Today",
+        "type": "table",
+        "gridPos": {
+          "x": 12,
+          "y": 8,
+          "w": 12,
+          "h": 8
+        },
+        "targets": [
+          {
+            "datasource": "MOEX Analytics DWH",
+            "format": "table",
+            "rawSql": "SELECT ds.secid, ds.shortname, tp.price_change_pct, tp.volume, tp.value FROM analytics.top_performers tp JOIN analytics.dim_security ds ON tp.security_key = ds.security_key WHERE tp.analysis_date = CURRENT_DATE AND tp.period = 'daily' AND tp.price_change_pct < 0 ORDER BY tp.price_change_pct LIMIT 10",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "title": "Market Sentiment",
+        "type": "piechart",
+        "gridPos": {
+          "x": 0,
+          "y": 16,
+          "w": 8,
+          "h": 8
+        },
+        "targets": [
+          {
+            "datasource": "MOEX Analytics DWH",
+            "format": "table",
+            "rawSql": "SELECT 'Gainers' as metric, gainers_count as value FROM analytics.market_summary WHERE summary_date = CURRENT_DATE UNION ALL SELECT 'Losers' as metric, losers_count as value FROM analytics.market_summary WHERE summary_date = CURRENT_DATE UNION ALL SELECT 'Unchanged' as metric, unchanged_count as value FROM analytics.market_summary WHERE summary_date = CURRENT_DATE",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 6,
+        "title": "Average Price Change %",
+        "type": "stat",
+        "gridPos": {
+          "x": 8,
+          "y": 16,
+          "w": 8,
+          "h": 4
+        },
+        "targets": [
+          {
+            "datasource": "MOEX Analytics DWH",
+            "format": "table",
+            "rawSql": "SELECT avg_price_change_pct FROM analytics.market_summary WHERE summary_date = CURRENT_DATE",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "decimals": 2
+          }
+        }
+      },
+      {
+        "id": 7,
+        "title": "Market Volatility",
+        "type": "stat",
+        "gridPos": {
+          "x": 16,
+          "y": 16,
+          "w": 8,
+          "h": 4
+        },
+        "targets": [
+          {
+            "datasource": "MOEX Analytics DWH",
+            "format": "table",
+            "rawSql": "SELECT market_volatility FROM analytics.market_summary WHERE summary_date = CURRENT_DATE",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "decimals": 2
+          }
+        }
+      },
+      {
+        "id": 8,
+        "title": "Total Securities Trading",
+        "type": "stat",
+        "gridPos": {
+          "x": 8,
+          "y": 20,
+          "w": 8,
+          "h": 4
+        },
+        "targets": [
+          {
+            "datasource": "MOEX Analytics DWH",
+            "format": "table",
+            "rawSql": "SELECT total_securities FROM analytics.market_summary WHERE summary_date = CURRENT_DATE",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 9,
+        "title": "Weekly Price Trends - Top 5 Securities",
+        "type": "graph",
+        "gridPos": {
+          "x": 0,
+          "y": 24,
+          "w": 24,
+          "h": 8
+        },
+        "targets": [
+          {
+            "datasource": "MOEX Analytics DWH",
+            "format": "time_series",
+            "rawSql": "SELECT w.week_start_date as time, ds.secid, w.close_price as value FROM analytics.agg_weekly_trading w JOIN analytics.dim_security ds ON w.security_key = ds.security_key WHERE w.year >= EXTRACT(YEAR FROM CURRENT_DATE) - 1 AND ds.secid IN ('SBER', 'GAZP', 'LKOH', 'YNDX', 'GMKN') ORDER BY time",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {
+            "format": "currencyRUB",
+            "label": "Price"
+          }
+        ]
+      },
+      {
+        "id": 10,
+        "title": "Monthly Trading Volume by Security",
+        "type": "bargauge",
+        "gridPos": {
+          "x": 0,
+          "y": 32,
+          "w": 24,
+          "h": 8
+        },
+        "targets": [
+          {
+            "datasource": "MOEX Analytics DWH",
+            "format": "table",
+            "rawSql": "SELECT ds.secid, m.total_volume FROM analytics.agg_monthly_trading m JOIN analytics.dim_security ds ON m.security_key = ds.security_key WHERE m.year = EXTRACT(YEAR FROM CURRENT_DATE) AND m.month = EXTRACT(MONTH FROM CURRENT_DATE) ORDER BY m.total_volume DESC LIMIT 20",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "orientation": "horizontal",
+          "displayMode": "gradient"
+        }
+      }
+    ]
+  }
+}

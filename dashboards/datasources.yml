@@ -1,0 +1,31 @@
+apiVersion: 1
+
+datasources:
+  - name: MOEX Analytics DWH
+    type: postgres
+    access: proxy
+    url: postgres_dwh:5432
+    database: moex_dwh
+    user: moex_user
+    secureJsonData:
+      password: moex_password
+    jsonData:
+      sslmode: disable
+      postgresVersion: 1500
+      timescaledb: false
+    isDefault: true
+    editable: true
+
+  - name: MOEX Raw Data
+    type: postgres
+    access: proxy
+    url: postgres_raw:5432
+    database: moex_raw
+    user: moex_user
+    secureJsonData:
+      password: moex_password
+    jsonData:
+      sslmode: disable
+      postgresVersion: 1500
+      timescaledb: false
+    editable: true

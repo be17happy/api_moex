@@ -1,0 +1,19 @@
+FROM apache/airflow:2.7.3-python3.11
+
+USER root
+
+# Установка системных зависимостей
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    build-essential \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Копируем requirements
+COPY requirements_airflow.txt /tmp/requirements.txt
+RUN chown airflow:root /tmp/requirements.txt
+
+USER airflow
+
+# Устанавливаем Python зависимости
+RUN pip install --no-cache-dir --user -r /tmp/requirements.txt
